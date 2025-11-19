@@ -1,9 +1,5 @@
 # Real last changed
 
-[![GitHub Release][releases-shield]][releases]
-[![GitHub Activity][commits-shield]][commits]
-[![License][license-shield]](LICENSE)
-
 <a href="https://liberapay.com/HamletDuFromage/donate"><img alt="Donate using Liberapay" src="https://liberapay.com/assets/widgets/donate.svg"></a>
 [![btc](https://img.shields.io/badge/BTC-1CoFc1bY5AHLP6Noe1zmqnJnp7ZWBxyo79-yellow?logo=bitcoin)](https://github.com/HamletDuFromage/aio-switch-updater#like-the-app)
 [![eth](https://img.shields.io/badge/ETH-0xf68f568e21a15934e0e9a6949288c3ca009140ba-purple?logo=ethereum)](https://github.com/HamletDuFromage/aio-switch-updater#like-the-app)
