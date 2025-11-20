@@ -15,34 +15,18 @@ There have been multiple feature requests over the years to make the last change
 ![icon][iconimg]
 
 ## Installation
+### Using [HACS](https://hacs.xyz/) 
+1. Go to HACS section;
+2. From the 3 dots menu (top right) click on **Add custom repository**;
+3. Add as **Integration** this url https://github.com/HamletDuFromage/ha_real-last-changed;
+4. Search and install **Restore Persistent Notification** from the HACS integration list;
+5. Add this integration from the **Home Assistant** integrations.
 
-1. Using the tool of choice open the directory (folder) for your HA configuration (where you find `configuration.yaml`).
-2. If you do not have a `custom_components` directory (folder) there, you need to create it.
-3. In the `custom_components` directory (folder) create a new folder called `real_last_changed`.
-4. Download _all_ the files from the `custom_components/real_last_changed/` directory (folder) in this repository.
-5. Place the files you downloaded in the new directory (folder) you created.
-6. Restart Home Assistant
-7. In the HA UI go to "Configuration" -> "Integrations" click "+" and search for "Real last changed"
-
-Using your HA configuration directory (folder) as a starting point you should now also have this:
-
-```text
-custom_components/real_last_changed/translations/en.json
-custom_components/real_last_changed/translations/fr.json
-custom_components/real_last_changed/translations/nb.json
-custom_components/real_last_changed/translations/sensor.en.json
-custom_components/real_last_changed/translations/sensor.fr.json
-custom_components/real_last_changed/translations/sensor.nb.json
-custom_components/real_last_changed/translations/sensor.nb.json
-custom_components/real_last_changed/__init__.py
-custom_components/real_last_changed/api.py
-custom_components/real_last_changed/binary_sensor.py
-custom_components/real_last_changed/config_flow.py
-custom_components/real_last_changed/const.py
-custom_components/real_last_changed/manifest.json
-custom_components/real_last_changed/sensor.py
-custom_components/real_last_changed/switch.py
-```
+### Manually
+1. Download this repository;
+2. Copy the directory **custom_components/ha_real-last-changed** on your Home Assistant **config/custom_components/ha_real-last-changed**;
+3. Restart HomeAssistant;
+4. Add this integration from the **Home Assistant** integrations.
 
 ## Configuration is done in the UI
 
