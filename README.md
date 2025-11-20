@@ -28,7 +28,7 @@ There have been multiple feature requests over the years to make the last change
 3. Restart HomeAssistant;
 4. Add this integration from the **Home Assistant** integrations.
 
-## Configuration is done in the UI
+<img src="https://github.com/user-attachments/assets/37360351-8927-41ce-b52d-a7b14b2108fd" />
 
 <!---->
 
