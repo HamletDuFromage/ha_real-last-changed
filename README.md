@@ -28,7 +28,7 @@ There have been multiple feature requests over the years to make the last change
 3. Restart HomeAssistant;
 4. Add this integration from the **Home Assistant** integrations.
 
-<img src="https://github.com/user-attachments/assets/37360351-8927-41ce-b52d-a7b14b2108fd" />
+![config][configimg]
 
 <!---->
 
@@ -43,6 +43,7 @@ There have been multiple feature requests over the years to make the last change
 [discord]: https://discord.gg/Qa5fW2R
 [discord-shield]: https://img.shields.io/discord/330944238910963714.svg?style=for-the-badge
 [iconimg]: icon.png
+[configimg]: examples/configuration.png
 [forum-shield]: https://img.shields.io/badge/community-forum-brightgreen.svg?style=for-the-badge
 [forum]: https://community.home-assistant.io/
 [license-shield]: https://img.shields.io/github/license/HamletDuFromage/ha_real-last-changed.svg?style=for-the-badge
