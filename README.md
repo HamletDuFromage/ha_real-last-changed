@@ -5,6 +5,10 @@ This component creates entities that track the last time an entity's state has a
 There have been multiple feature requests over the years to make the last changed state persist reboots. 
 [2019](https://community.home-assistant.io/t/retain-last-state-change-data-of-a-sensor-after-reboot/125148) [2020](https://community.home-assistant.io/t/what-the-heck-is-with-the-latest-state-change-not-being-kept-after-restart/219480) [2022](https://community.home-assistant.io/t/persistent-version-of-last-changed-for-the-ui/467163) [2024](https://community.home-assistant.io/t/wth-there-is-no-new-last-attribute-that-retains-restart/802413)
 
+## Features
+- Logs the last time an entity went from one valid state to another
+- Stores the last valid state in `previous_valid_state` attribute
+
 ## Installation
 ### HACS
 **Real Last Changed** is available via [HACS](https://hacs.xyz/).

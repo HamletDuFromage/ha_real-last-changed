@@ -26,30 +26,34 @@ class RealLastChangedSensor(RestoreEntity, SensorEntity):
         self._attr_name = f"{source_entity.split('.')[-1]}_real_last_changed"
         self._attr_unique_id = f"{source_entity.replace('.', '_')}_real_last_changed"
         self._attr_native_value = None
+        self._previous_valid_state = None
         self._unsubscribe = None
+
+    @property
+    def extra_state_attributes(self):
+        """Return the state attributes."""
+        return {"previous_valid_state": self._previous_valid_state}
 
     async def async_added_to_hass(self):
         """Restore previous state and track changes."""
         await super().async_added_to_hass()
 
-        # Restore previous timestamp if exists
+        # Restore previous timestamp and valid state if exists
         if (state := await self.async_get_last_state()) is not None:
             self._attr_native_value = dt_util.parse_datetime(state.state)
+            self._previous_valid_state = state.attributes.get("previous_valid_state")
 
         # Track state changes
         @callback
         def _state_changed(event):
-            old: State | None = event.data.get("old_state")
+
             new: State | None = event.data.get("new_state")
             
             if new is None or new.state in (STATE_UNKNOWN, STATE_UNAVAILABLE):
                 return
 
-            # Only update if state really changed
-            if old is None or old.state in (STATE_UNKNOWN, STATE_UNAVAILABLE):
-                return
-                
-            if old.state != new.state:
+            if self._previous_valid_state != new.state:
+                self._previous_valid_state = new.state
                 self._attr_native_value = datetime.now().astimezone()
                 self.async_write_ha_state()
 
