@@ -4,14 +4,15 @@ from homeassistant.components.sensor import SensorEntity
 from homeassistant.core import HomeAssistant, callback, State
 from homeassistant.helpers.event import async_track_state_change_event
 from homeassistant.helpers.restore_state import RestoreEntity
-from homeassistant.util import dt as dt_util
-from homeassistant.const import STATE_UNKNOWN, STATE_UNAVAILABLE
+from homeassistant.util import dt as dt_util, slugify
+from homeassistant.const import STATE_UNKNOWN, STATE_UNAVAILABLE, CONF_NAME
 from .const import CONF_SOURCE_ENTITY
 
 async def async_setup_entry(hass: HomeAssistant, entry, async_add_entities):
     """Set up sensor for a config entry."""
     source = entry.data[CONF_SOURCE_ENTITY]
-    sensor = RealLastChangedSensor(source)
+    name = entry.data.get(CONF_NAME)
+    sensor = RealLastChangedSensor(source, name)
     async_add_entities([sensor])
 
 class RealLastChangedSensor(RestoreEntity, SensorEntity):
@@ -21,10 +22,14 @@ class RealLastChangedSensor(RestoreEntity, SensorEntity):
     _attr_native_unit_of_measurement = None
     _attr_device_class = "timestamp"
 
-    def __init__(self, source_entity: str):
+    def __init__(self, source_entity: str, name: str | None = None):
         self._source = source_entity
-        self._attr_name = f"{source_entity.split('.')[-1]}_real_last_changed"
-        self._attr_unique_id = f"{source_entity.replace('.', '_')}_real_last_changed"
+        if name:
+            self._attr_name = name
+            self._attr_unique_id = slugify(name)
+        else:
+            self._attr_name = f"{source_entity.split('.')[-1]}_real_last_changed"
+            self._attr_unique_id = f"{source_entity.replace('.', '_')}_real_last_changed"
         self._attr_native_value = None
         self._previous_valid_state = None
         self._unsubscribe = None
