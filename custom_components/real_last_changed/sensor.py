@@ -4,15 +4,26 @@ from homeassistant.components.sensor import SensorEntity
 from homeassistant.core import HomeAssistant, callback, State
 from homeassistant.helpers.event import async_track_state_change_event
 from homeassistant.helpers.restore_state import RestoreEntity
+from homeassistant.helpers import device_registry as dr
 from homeassistant.util import dt as dt_util, slugify
 from homeassistant.const import STATE_UNKNOWN, STATE_UNAVAILABLE, CONF_NAME
-from .const import CONF_SOURCE_ENTITY
+from .const import CONF_SOURCE_ENTITY, CONF_DEVICE_ID, DOMAIN
 
 async def async_setup_entry(hass: HomeAssistant, entry, async_add_entities):
     """Set up sensor for a config entry."""
     source = entry.data[CONF_SOURCE_ENTITY]
     name = entry.data.get(CONF_NAME)
-    sensor = RealLastChangedSensor(source, name)
+    device_id = entry.data.get(CONF_DEVICE_ID)
+    
+    device_info = None
+    if device_id:
+        dev_reg = dr.async_get(hass)
+        if device := dev_reg.async_get(device_id):
+            device_info = dr.DeviceInfo(
+                identifiers=device.identifiers,
+            )
+
+    sensor = RealLastChangedSensor(source, name, device_info)
     async_add_entities([sensor])
 
 class RealLastChangedSensor(RestoreEntity, SensorEntity):
@@ -21,15 +32,18 @@ class RealLastChangedSensor(RestoreEntity, SensorEntity):
     _attr_should_poll = False
     _attr_native_unit_of_measurement = None
     _attr_device_class = "timestamp"
+    _attr_icon = "mdi:clock-check-outline"
 
-    def __init__(self, source_entity: str, name: str | None = None):
+    def __init__(self, source_entity: str, name: str | None = None, device_info: dr.DeviceInfo | None = None):
         self._source = source_entity
+        self._attr_device_info = device_info
         if name:
             self._attr_name = name
             self._attr_unique_id = slugify(name)
         else:
             self._attr_name = f"{source_entity.split('.')[-1]}_real_last_changed"
             self._attr_unique_id = f"{source_entity.replace('.', '_')}_real_last_changed"
+        
         self._attr_native_value = None
         self._previous_valid_state = None
         self._unsubscribe = None

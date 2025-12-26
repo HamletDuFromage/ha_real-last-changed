@@ -8,6 +8,13 @@
                     "source_entity": "Source Entity",
                     "name": "Name (optional)"
                 }
+            },
+            "device_link": {
+                "title": "Add to Device?",
+                "description": "The tracked entity belongs to the device {device_name}. Do you want to add the new tracking sensor to that device?",
+                "data": {
+                    "link_device": "Add to device"
+                }
             }
         }
     }
