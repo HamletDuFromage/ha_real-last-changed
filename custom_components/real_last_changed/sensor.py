@@ -19,9 +19,8 @@ async def async_setup_entry(hass: HomeAssistant, entry, async_add_entities):
     if device_id:
         dev_reg = dr.async_get(hass)
         if device := dev_reg.async_get(device_id):
-            device_info = dr.DeviceInfo(
-                identifiers=device.identifiers,
-            )
+            if device.identifiers:
+                device_info = dr.DeviceInfo(identifiers=device.identifiers)
 
     sensor = RealLastChangedSensor(source, name, device_info)
     async_add_entities([sensor])
