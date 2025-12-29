@@ -27,7 +27,7 @@ class RealLastChangedFlow(config_entries.ConfigFlow, domain=DOMAIN):
             if entry and entry.device_id:
                 return await self.async_step_device_link()
             
-            return self._async_create_entry()
+            return await self._async_create_entry()
 
         schema = vol.Schema({
             vol.Required(CONF_SOURCE_ENTITY): selector.selector({"entity": {}}),
@@ -51,7 +51,7 @@ class RealLastChangedFlow(config_entries.ConfigFlow, domain=DOMAIN):
             if user_input["link_device"]:
                 self._user_input[CONF_DEVICE_ID] = device_id
             
-            return self._async_create_entry()
+            return await self._async_create_entry()
 
         return self.async_show_form(
             step_id="device_link",
@@ -63,7 +63,7 @@ class RealLastChangedFlow(config_entries.ConfigFlow, domain=DOMAIN):
             },
         )
 
-    def _async_create_entry(self):
+    async def _async_create_entry(self):
         """Create the config entry."""
         entity_id = self._user_input[CONF_SOURCE_ENTITY]
         name = self._user_input.get(CONF_NAME)
@@ -72,7 +72,7 @@ class RealLastChangedFlow(config_entries.ConfigFlow, domain=DOMAIN):
         else:
             unique_id = entity_id
         
-        self.async_set_unique_id(unique_id)
+        await self.async_set_unique_id(unique_id)
         self._abort_if_unique_id_configured()
         
         return self.async_create_entry(
