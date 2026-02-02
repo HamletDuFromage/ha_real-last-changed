@@ -3,19 +3,40 @@
         "step": {
             "user": {
                 "title": "Add Real Last Changed Sensor",
-                "description": "Create a sensor that tracks the last time an entity actually changed state.",
-                "data": {
-                    "source_entity": "Source Entity",
-                    "name": "Name (optional)"
+                "menu_options": {
+                    "single": "Single entity",
+                    "pattern": "Pattern matching"
                 }
             },
-            "device_link": {
-                "title": "Add to Device?",
-                "description": "The tracked entity belongs to the device {device_name}. Do you want to add the new tracking sensor to that device?",
+            "single": {
+                "title": "Add Single Sensor",
+                "description": "Track when an entity actually changes state.",
                 "data": {
-                    "link_device": "Add to device"
+                    "source_entity": "Entity to track"
                 }
+            },
+            "pattern": {
+                "title": "Pattern Matching",
+                "description": "Create sensors for all entities matching a pattern.",
+                "data": {
+                    "pattern": "Pattern (matches entity ID)",
+                    "regex": "Use regex"
+                }
+            },
+            "confirm": {
+                "title": "Confirm Selection",
+                "description": "Found {count} new entities to track:\n\n{entities}\n\nPress Submit to create sensors."
             }
+        },
+        "abort": {
+            "already_configured": "Already configured.",
+            "cannot_track_self": "Cannot track a Real Last Changed sensor.",
+            "added_to_device": "Added {count} sensor(s) to existing device entry.",
+            "bulk_created": "Created {created} new entry/entries. Added {added} to existing devices."
+        },
+        "error": {
+            "no_pattern": "Enter a pattern.",
+            "no_matches": "No new matches found."
         }
     }
 }
