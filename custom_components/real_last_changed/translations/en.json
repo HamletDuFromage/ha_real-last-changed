@@ -13,7 +13,7 @@
                 "description": "Track when an entity actually changes state.",
                 "data": {
                     "source_entity": "Entity to track",
-                    "name": "Name"
+                    "name": "Name (optional)"
                 }
             },
             "pattern": {
