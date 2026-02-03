@@ -7,7 +7,7 @@ from homeassistant.helpers.restore_state import RestoreEntity
 from homeassistant.helpers import device_registry as dr
 from homeassistant.util import dt as dt_util, slugify
 from homeassistant.const import STATE_UNKNOWN, STATE_UNAVAILABLE, CONF_NAME
-from .const import CONF_SOURCE_ENTITY, CONF_SOURCE_ENTITIES, CONF_DEVICE_ID
+from .const import CONF_SOURCE_ENTITY, CONF_SOURCE_ENTITIES, CONF_DEVICE_ID, CONF_FROM_STATE, CONF_TO_STATE
 
 
 async def async_setup_entry(hass: HomeAssistant, entry, async_add_entities):
@@ -20,6 +20,8 @@ async def async_setup_entry(hass: HomeAssistant, entry, async_add_entities):
         if device := dev_reg.async_get(device_id):
             if device.identifiers:
                 device_info = dr.DeviceInfo(identifiers=device.identifiers)
+    from_state = entry.data.get(CONF_FROM_STATE)
+    to_state = entry.data.get(CONF_TO_STATE)
 
     # Support both V1 (single) and V2 (list) formats
     entities = []
@@ -29,7 +31,7 @@ async def async_setup_entry(hass: HomeAssistant, entry, async_add_entities):
     elif CONF_SOURCE_ENTITY in entry.data:
         entities = [entry.data[CONF_SOURCE_ENTITY]]
 
-    sensors = [RealLastChangedSensor(e, name if len(entities) == 1 else None, device_info) for e in entities]
+    sensors = [RealLastChangedSensor(e, name if len(entities) == 1 else None, device_info, from_state, to_state) for e in entities]
     async_add_entities(sensors)
 
 
@@ -40,9 +42,11 @@ class RealLastChangedSensor(RestoreEntity, SensorEntity):
     _attr_device_class = "timestamp"
     _attr_icon = "mdi:clock-check-outline"
 
-    def __init__(self, source_entity: str, name: str | None = None, device_info: dr.DeviceInfo | None = None):
+    def __init__(self, source_entity: str, name: str | None = None, device_info: dr.DeviceInfo | None = None, from_state: str | None = None, to_state: str | None = None):
         self._source = source_entity
         self._attr_device_info = device_info
+        self._from_state = from_state
+        self._to_state = to_state
         if name:
             self._attr_name = name
             self._attr_unique_id = slugify(name)
@@ -66,13 +70,23 @@ class RealLastChangedSensor(RestoreEntity, SensorEntity):
 
         @callback
         def on_state_change(event):
+            old = event.data.get("old_state")
             new = event.data.get("new_state")
             if new is None or new.state in (STATE_UNKNOWN, STATE_UNAVAILABLE):
                 return
-            if self._previous_state != new.state:
-                self._previous_state = new.state
-                self._attr_native_value = datetime.now().astimezone()
-                self.async_write_ha_state()
+            
+            if self._from_state and (old is None or old.state != self._from_state):
+                return
+            if self._to_state and new.state != self._to_state:
+                return
+            
+            if not self._from_state and not self._to_state:
+                if self._previous_state == new.state:
+                    return
+
+            self._previous_state = new.state
+            self._attr_native_value = datetime.now().astimezone()
+            self.async_write_ha_state()
 
         self._unsub = async_track_state_change_event(self.hass, [self._source], on_state_change)
 

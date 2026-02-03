@@ -1,11 +1,11 @@
 from __future__ import annotations
 import re
 import voluptuous as vol
-from homeassistant import config_entries
+from homeassistant import config_entries, data_entry_flow
 from homeassistant.helpers import selector, entity_registry as er, device_registry as dr
 from homeassistant.util import slugify
 from homeassistant.const import CONF_NAME
-from .const import DOMAIN, CONF_SOURCE_ENTITY, CONF_SOURCE_ENTITIES, CONF_DEVICE_ID
+from .const import DOMAIN, CONF_SOURCE_ENTITY, CONF_SOURCE_ENTITIES, CONF_DEVICE_ID, CONF_FROM_STATE, CONF_TO_STATE
 
 
 class RealLastChangedFlow(config_entries.ConfigFlow, domain=DOMAIN):
@@ -21,13 +21,26 @@ class RealLastChangedFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
     async def async_step_single(self, user_input=None):
         if user_input is not None:
-            return await self._create_or_update(user_input[CONF_SOURCE_ENTITY], user_input.get(CONF_NAME))
+            advanced = user_input.get("advanced_options", {})
+            return await self._create_or_update(
+                user_input[CONF_SOURCE_ENTITY], 
+                user_input.get(CONF_NAME),
+                advanced.get(CONF_FROM_STATE),
+                advanced.get(CONF_TO_STATE)
+            )
 
         return self.async_show_form(
             step_id="single",
             data_schema=vol.Schema({
                 vol.Required(CONF_SOURCE_ENTITY): selector.EntitySelector(),
                 vol.Optional(CONF_NAME): str,
+                vol.Optional("advanced_options"): data_entry_flow.section(
+                    vol.Schema({
+                        vol.Optional(CONF_FROM_STATE): str,
+                        vol.Optional(CONF_TO_STATE): str,
+                    }), 
+                    {"collapsed": True}
+                ),
             }),
         )
 
@@ -39,6 +52,11 @@ class RealLastChangedFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 errors["base"] = "no_pattern" if not pattern else "no_matches"
             else:
                 self._matched = matched
+                advanced = user_input.get("advanced_options", {})
+                self._filter_data = {
+                    CONF_FROM_STATE: advanced.get(CONF_FROM_STATE),
+                    CONF_TO_STATE: advanced.get(CONF_TO_STATE),
+                }
                 return await self.async_step_confirm()
 
         return self.async_show_form(
@@ -46,13 +64,20 @@ class RealLastChangedFlow(config_entries.ConfigFlow, domain=DOMAIN):
             data_schema=vol.Schema({
                 vol.Required("pattern"): str,
                 vol.Optional("regex", default=False): bool,
+                vol.Optional("advanced_options"): data_entry_flow.section(
+                    vol.Schema({
+                        vol.Optional(CONF_FROM_STATE): str,
+                        vol.Optional(CONF_TO_STATE): str,
+                    }), 
+                    {"collapsed": True}
+                ),
             }),
             errors=errors,
         )
 
     async def async_step_confirm(self, user_input=None):
         if user_input is not None:
-            return await self._create_bulk(self._matched)
+            return await self._create_bulk(self._matched, self._filter_data)
 
         preview = "\n".join(f"• {e}" for e in self._matched[:30])
         if len(self._matched) > 30:
@@ -103,7 +128,7 @@ class RealLastChangedFlow(config_entries.ConfigFlow, domain=DOMAIN):
         device = dr.async_get(self.hass).async_get(device_id)
         return device.name_by_user or device.name or device_id if device else device_id
 
-    async def _create_or_update(self, entity_id: str, name: str | None = None):
+    async def _create_or_update(self, entity_id: str, name: str | None = None, from_state: str | None = None, to_state: str | None = None):
         if self._is_rlc_entity(entity_id):
             return self.async_abort(reason="cannot_track_self")
         if entity_id in self._get_tracked_entities():
@@ -120,7 +145,12 @@ class RealLastChangedFlow(config_entries.ConfigFlow, domain=DOMAIN):
             await self.async_set_unique_id(slugify(name))
             self._abort_if_unique_id_configured()
 
-        data = {CONF_SOURCE_ENTITIES: [entity_id], CONF_DEVICE_ID: device_id}
+        data = {
+            CONF_SOURCE_ENTITIES: [entity_id], 
+            CONF_DEVICE_ID: device_id,
+            CONF_FROM_STATE: from_state,
+            CONF_TO_STATE: to_state,
+        }
         if name:
             data[CONF_NAME] = name
 
@@ -136,7 +166,7 @@ class RealLastChangedFlow(config_entries.ConfigFlow, domain=DOMAIN):
         self.hass.config_entries.async_update_entry(entry, data=new_data)
         await self.hass.config_entries.async_reload(entry.entry_id)
 
-    async def _create_bulk(self, entities: list[str]):
+    async def _create_bulk(self, entities: list[str], filter_data: dict | None = None):
         ent_reg, by_device = er.async_get(self.hass), {}
         for eid in entities:
             entry = ent_reg.async_get(eid)
@@ -148,9 +178,12 @@ class RealLastChangedFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 await self._update_entry(existing, eids)
                 added += len(eids)
             else:
+                data = {CONF_SOURCE_ENTITIES: eids, CONF_DEVICE_ID: dev_id}
+                if filter_data:
+                    data.update(filter_data)
                 self.hass.async_create_task(self.hass.config_entries.flow.async_init(
                     DOMAIN, context={"source": "import"},
-                    data={CONF_SOURCE_ENTITIES: eids, CONF_DEVICE_ID: dev_id},
+                    data=data,
                 ))
                 created += 1
 

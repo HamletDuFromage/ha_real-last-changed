@@ -11,6 +11,15 @@
             "single": {
                 "title": "Add Single Sensor",
                 "description": "Track when an entity actually changes state.",
+                "sections": {
+                    "advanced_options": {
+                        "name": "Advanced",
+                        "data": {
+                            "from_state": "From state (optional)",
+                            "to_state": "To state (optional)"
+                        }
+                    }
+                },
                 "data": {
                     "source_entity": "Entity to track",
                     "name": "Name (optional)"
@@ -19,6 +28,15 @@
             "pattern": {
                 "title": "Pattern Matching",
                 "description": "Create sensors for all entities matching a pattern.",
+                "sections": {
+                    "advanced_options": {
+                        "name": "Advanced",
+                        "data": {
+                            "from_state": "From state (optional)",
+                            "to_state": "To state (optional)"
+                        }
+                    }
+                },
                 "data": {
                     "pattern": "Pattern (matches entity ID)",
                     "regex": "Use regex"
