@@ -12,7 +12,8 @@
                 "title": "Add Single Sensor",
                 "description": "Track when an entity actually changes state.",
                 "data": {
-                    "source_entity": "Entity to track"
+                    "source_entity": "Entity to track",
+                    "name": "Name"
                 }
             },
             "pattern": {

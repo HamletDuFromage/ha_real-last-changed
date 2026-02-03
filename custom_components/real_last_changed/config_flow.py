@@ -3,6 +3,8 @@ import re
 import voluptuous as vol
 from homeassistant import config_entries
 from homeassistant.helpers import selector, entity_registry as er, device_registry as dr
+from homeassistant.util import slugify
+from homeassistant.const import CONF_NAME
 from .const import DOMAIN, CONF_SOURCE_ENTITY, CONF_SOURCE_ENTITIES, CONF_DEVICE_ID
 
 
@@ -19,11 +21,14 @@ class RealLastChangedFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
     async def async_step_single(self, user_input=None):
         if user_input is not None:
-            return await self._create_or_update(user_input[CONF_SOURCE_ENTITY])
+            return await self._create_or_update(user_input[CONF_SOURCE_ENTITY], user_input.get(CONF_NAME))
 
         return self.async_show_form(
             step_id="single",
-            data_schema=vol.Schema({vol.Required(CONF_SOURCE_ENTITY): selector.EntitySelector()}),
+            data_schema=vol.Schema({
+                vol.Required(CONF_SOURCE_ENTITY): selector.EntitySelector(),
+                vol.Optional(CONF_NAME): str,
+            }),
         )
 
     async def async_step_pattern(self, user_input=None):
@@ -98,7 +103,7 @@ class RealLastChangedFlow(config_entries.ConfigFlow, domain=DOMAIN):
         device = dr.async_get(self.hass).async_get(device_id)
         return device.name_by_user or device.name or device_id if device else device_id
 
-    async def _create_or_update(self, entity_id: str):
+    async def _create_or_update(self, entity_id: str, name: str | None = None):
         if self._is_rlc_entity(entity_id):
             return self.async_abort(reason="cannot_track_self")
         if entity_id in self._get_tracked_entities():
@@ -111,9 +116,17 @@ class RealLastChangedFlow(config_entries.ConfigFlow, domain=DOMAIN):
             await self._update_entry(existing, [entity_id])
             return self.async_abort(reason="added_to_device", description_placeholders={"count": "1"})
 
+        if name:
+            await self.async_set_unique_id(slugify(name))
+            self._abort_if_unique_id_configured()
+
+        data = {CONF_SOURCE_ENTITIES: [entity_id], CONF_DEVICE_ID: device_id}
+        if name:
+            data[CONF_NAME] = name
+
         return self.async_create_entry(
-            title=f"Real Last Changed: {self._get_device_name(device_id) if device_id else entity_id}",
-            data={CONF_SOURCE_ENTITIES: [entity_id], CONF_DEVICE_ID: device_id},
+            title=name or f"Real Last Changed: {self._get_device_name(device_id) or entity_id}",
+            data=data,
         )
 
     async def _update_entry(self, entry, new_entities: list[str]):
