@@ -90,9 +90,9 @@ class RealLastChangedFlow(config_entries.ConfigFlow, domain=DOMAIN):
         )
 
     def _match_entities(self, pattern: str, use_regex: bool) -> list[str]:
-        matched, existing = [], self._get_tracked_entities()
+        matched = []
         for eid in self.hass.states.async_entity_ids():
-            if self._is_rlc_entity(eid) or eid in existing:
+            if self._is_rlc_entity(eid):
                 continue
             try:
                 if use_regex and re.search(pattern, eid, re.IGNORECASE):
@@ -115,8 +115,22 @@ class RealLastChangedFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 tracked.add(entry.data[CONF_SOURCE_ENTITY])
         return tracked
 
-    def _get_device_entry(self, device_id: str):
-        return next((e for e in self.hass.config_entries.async_entries(DOMAIN) if e.data.get(CONF_DEVICE_ID) == device_id), None)
+    def _get_device_entry(self, device_id: str, from_state: str | None, to_state: str | None):
+        for entry in self.hass.config_entries.async_entries(DOMAIN):
+            if entry.data.get(CONF_DEVICE_ID) != device_id:
+                continue
+            
+            if self._entry_matches_states(entry, from_state, to_state):
+                return entry
+        return None
+
+    def _entry_matches_states(self, entry, from_state: str | None, to_state: str | None) -> bool:
+        e_from = entry.data.get(CONF_FROM_STATE) or None
+        e_to = entry.data.get(CONF_TO_STATE) or None
+        t_from = from_state or None
+        t_to = to_state or None
+        return e_from == t_from and e_to == t_to
+        return None
 
     def _get_entities_from_entry(self, entry) -> list[str]:
         ents = list(entry.data.get(CONF_SOURCE_ENTITIES, []))
@@ -128,16 +142,32 @@ class RealLastChangedFlow(config_entries.ConfigFlow, domain=DOMAIN):
         device = dr.async_get(self.hass).async_get(device_id)
         return device.name_by_user or device.name or device_id if device else device_id
 
+    def _is_duplicated(self, entity_id: str, from_state: str | None, to_state: str | None) -> bool:
+        for entry in self.hass.config_entries.async_entries(DOMAIN):
+            ignored_entities = entry.data.get(CONF_SOURCE_ENTITIES, [])
+            if CONF_SOURCE_ENTITY in entry.data:
+                ignored_entities.append(entry.data[CONF_SOURCE_ENTITY])
+            
+            if entity_id not in ignored_entities:
+                continue
+
+            # Check if states match
+            if self._entry_matches_states(entry, from_state, to_state):
+                return True
+        return False
+
     async def _create_or_update(self, entity_id: str, name: str | None = None, from_state: str | None = None, to_state: str | None = None):
         if self._is_rlc_entity(entity_id):
             return self.async_abort(reason="cannot_track_self")
-        if entity_id in self._get_tracked_entities():
-            return self.async_abort(reason="already_configured")
+        
+        # Global duplicate check
+        if self._is_duplicated(entity_id, from_state, to_state):
+             return self.async_abort(reason="already_configured")
 
         entry = er.async_get(self.hass).async_get(entity_id)
         device_id = entry.device_id if entry else None
 
-        if device_id and (existing := self._get_device_entry(device_id)):
+        if device_id and (existing := self._get_device_entry(device_id, from_state, to_state)):
             await self._update_entry(existing, [entity_id])
             return self.async_abort(reason="added_to_device", description_placeholders={"count": "1"})
 
@@ -155,7 +185,7 @@ class RealLastChangedFlow(config_entries.ConfigFlow, domain=DOMAIN):
             data[CONF_NAME] = name
 
         return self.async_create_entry(
-            title=name or f"Real Last Changed: {self._get_device_name(device_id) or entity_id}",
+            title=name or self._get_device_name(device_id) or entity_id,
             data=data,
         )
 
@@ -173,12 +203,22 @@ class RealLastChangedFlow(config_entries.ConfigFlow, domain=DOMAIN):
             by_device.setdefault(entry.device_id if entry else None, []).append(eid)
 
         created, added = 0, 0
+        from_s = filter_data.get(CONF_FROM_STATE) if filter_data else None
+        to_s = filter_data.get(CONF_TO_STATE) if filter_data else None
+
         for dev_id, eids in by_device.items():
-            if dev_id and (existing := self._get_device_entry(dev_id)):
-                await self._update_entry(existing, eids)
-                added += len(eids)
+            valid_eids = [e for e in eids if not self._is_duplicated(e, from_s, to_s)]
+            if not valid_eids:
+                continue
+
+            if dev_id and (existing := self._get_device_entry(dev_id, from_s, to_s)):
+                current_ents = self._get_entities_from_entry(existing)
+                to_add = [e for e in valid_eids if e not in current_ents]
+                if to_add:
+                    await self._update_entry(existing, to_add)
+                    added += len(to_add)
             else:
-                data = {CONF_SOURCE_ENTITIES: eids, CONF_DEVICE_ID: dev_id}
+                data = {CONF_SOURCE_ENTITIES: valid_eids, CONF_DEVICE_ID: dev_id}
                 if filter_data:
                     data.update(filter_data)
                 self.hass.async_create_task(self.hass.config_entries.flow.async_init(
@@ -191,7 +231,15 @@ class RealLastChangedFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
     async def async_step_import(self, data: dict):
         ents, dev_id = data.get(CONF_SOURCE_ENTITIES, []), data.get(CONF_DEVICE_ID)
-        await self.async_set_unique_id(f"device_{dev_id}" if dev_id else ents[0])
+        
+        base_id = f"device_{dev_id}" if dev_id else ents[0]
+        from_s = data.get(CONF_FROM_STATE)
+        to_s = data.get(CONF_TO_STATE)
+        suffix = ""
+        if from_s or to_s:
+            suffix = f"_{slugify(from_s or 'any')}_{slugify(to_s or 'any')}"
+            
+        await self.async_set_unique_id(f"{base_id}{suffix}")
         self._abort_if_unique_id_configured()
-        title = f"Real Last Changed: {self._get_device_name(dev_id) if dev_id else ents[0]}"
+        title = self._get_device_name(dev_id) if dev_id else ents[0]
         return self.async_create_entry(title=title, data=data)

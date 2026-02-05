@@ -47,12 +47,23 @@ class RealLastChangedSensor(RestoreEntity, SensorEntity):
         self._attr_device_info = device_info
         self._from_state = from_state
         self._to_state = to_state
+        
         if name:
             self._attr_name = name
             self._attr_unique_id = slugify(name)
         else:
-            self._attr_name = f"{source_entity.split('.')[-1].replace('_', ' ').title()} Real Last Changed"
-            self._attr_unique_id = f"{source_entity.replace('.', '_')}_real_last_changed"
+            base_name = f"{source_entity.split('.')[-1].replace('_', ' ').title()} Real Last Changed"
+            base_id = f"{source_entity.replace('.', '_')}_real_last_changed"
+            
+            if from_state or to_state:
+                f_safe = slugify(from_state or 'any')
+                t_safe = slugify(to_state or 'any')
+                self._attr_unique_id = f"{base_id}_{f_safe}_{t_safe}"
+                self._attr_name = f"{base_name} {from_state or '*'} to {to_state or '*'}"
+            else:
+                self._attr_unique_id = base_id
+                self._attr_name = base_name
+                
         self._attr_native_value = None
         self._previous_state = None
         self._unsub = None
