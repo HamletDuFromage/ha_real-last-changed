@@ -96,7 +96,7 @@ class RealLastChangedSensor(RestoreEntity, SensorEntity):
                     return
 
             self._previous_state = new.state
-            self._attr_native_value = datetime.now().astimezone()
+            self._attr_native_value = dt_util.now()
             self.async_write_ha_state()
 
         self._unsub = async_track_state_change_event(self.hass, [self._source], on_state_change)
