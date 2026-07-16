@@ -70,7 +70,10 @@ class RealLastChangedSensor(RestoreEntity, SensorEntity):
 
     @property
     def extra_state_attributes(self):
-        return {"previous_valid_state": self._previous_state}
+        return {
+            "previous_valid_state": self._previous_state,
+            "tracked_entity_id": self._source,
+        }
 
     async def async_added_to_hass(self):
         await super().async_added_to_hass()
